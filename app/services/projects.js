@@ -143,6 +143,18 @@ export default class ProjectsService extends Service {
           podEnquiriesPath: this.appSettings.podEnquiriesPath,
           podProjectsPath: this.appSettings.podProjectsPath,
         });
+
+        const { error: idError } = await this.supabase.client
+          .from('projects')
+          .update({ project_id: result.newProjectId })
+          .eq('id', projectId);
+
+        if (!idError) {
+          this.projects = this.projects.map((p) =>
+            p.id === projectId ? { ...data, project_id: result.newProjectId } : p
+          );
+        }
+
         this.toast.info(result.message, { duration: 8000 });
       }
 
