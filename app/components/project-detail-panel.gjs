@@ -9,6 +9,26 @@ import { unitLabel } from 'my-app/services/catalog';
 function eq(a, b) { return a === b; }
 function or(a, b) { return Boolean(a) || Boolean(b); }
 
+const STOCK_WARN_KEY = 'mfc_stock_warn_dismissed';
+
+function isStockWarnDismissedToday() {
+  try {
+    const stored = localStorage.getItem(STOCK_WARN_KEY);
+    if (!stored) return false;
+    return stored === new Date().toISOString().slice(0, 10);
+  } catch {
+    return false;
+  }
+}
+
+function dismissStockWarnToday() {
+  try {
+    localStorage.setItem(STOCK_WARN_KEY, new Date().toISOString().slice(0, 10));
+  } catch {
+    // ignore
+  }
+}
+
 class StatusOption extends Component {
   get isSelected() { return this.args.value === this.args.current; }
   <template><option value={{@value}} selected={{this.isSelected}}>{{@label}}</option></template>
@@ -24,6 +44,7 @@ export default class ProjectDetailPanel extends Component {
   @service toast;
 
   @tracked activeTab = 'details';
+  @tracked quoteMode = 'quick';
   @tracked notes = '';
   @tracked isSavingNotes = false;
   @tracked lastSyncedProjectId = null;
@@ -36,6 +57,10 @@ export default class ProjectDetailPanel extends Component {
   @tracked vatPct = '13.5';
   @tracked isSavingQuote = false;
   @tracked selectedCatalogId = '';
+  @tracked catalogSearch = '';
+
+  @tracked stockWarnItem = null;
+  @tracked stockWarnDismissToday = false;
 
   get project() { return this.args.project; }
   get isOpen() { return !!this.project; }
@@ -78,8 +103,10 @@ export default class ProjectDetailPanel extends Component {
     return this.project?.quote_line_items || [];
   }
 
-  get catalogItems() {
-    return this.catalog.items;
+  get filteredCatalogItems() {
+    const q = this.catalogSearch.trim().toLowerCase();
+    if (!q) return this.catalog.items;
+    return this.catalog.items.filter((i) => i.name.toLowerCase().includes(q));
   }
 
   get baseBuildItem() {
@@ -123,6 +150,7 @@ export default class ProjectDetailPanel extends Component {
   }
 
   setTab = (tab) => { this.activeTab = tab; };
+  setQuoteMode = (mode) => { this.quoteMode = mode; };
 
   handleNotesInput = (e) => { this.notes = e.target.value; };
   handleStatusChange = async (e) => {
@@ -172,12 +200,26 @@ export default class ProjectDetailPanel extends Component {
   };
 
   handleCatalogSelect = (e) => { this.selectedCatalogId = e.target.value; };
+  handleCatalogSearch = (e) => {
+    this.catalogSearch = e.target.value;
+    this.selectedCatalogId = '';
+  };
 
   addLineItem = async () => {
     if (!this.selectedCatalogId || !this.project) return;
     const item = this.catalog.getItemById(this.selectedCatalogId);
     if (!item) return;
 
+    if (item.track_stock && item.stock <= 0 && !isStockWarnDismissedToday()) {
+      this.stockWarnItem = item;
+      this.stockWarnDismissToday = false;
+      return;
+    }
+
+    await this._doAddLineItem(item);
+  };
+
+  _doAddLineItem = async (item) => {
     const newLineItem = {
       catalog_item_id: item.id,
       name: item.name,
@@ -192,10 +234,29 @@ export default class ProjectDetailPanel extends Component {
     try {
       await this.projects.updateProjectQuote(this.project.id, { quote_line_items: updated });
       this.selectedCatalogId = '';
+      this.catalogSearch = '';
       this.toast.success(`"${item.name}" added to quote.`, { duration: 3000 });
     } catch {
       this.toast.error('Failed to add line item.', { duration: 5000 });
     }
+  };
+
+  confirmStockWarn = async () => {
+    const item = this.stockWarnItem;
+    if (this.stockWarnDismissToday) {
+      dismissStockWarnToday();
+    }
+    this.stockWarnItem = null;
+    if (item) await this._doAddLineItem(item);
+  };
+
+  cancelStockWarn = () => {
+    this.stockWarnItem = null;
+    this.stockWarnDismissToday = false;
+  };
+
+  toggleStockWarnDismiss = (e) => {
+    this.stockWarnDismissToday = e.target.checked;
   };
 
   removeLineItem = async (index) => {
@@ -215,6 +276,34 @@ export default class ProjectDetailPanel extends Component {
   <template>
     {{#if this.isOpen}}
       {{(this.syncIfNeeded)}}
+
+      {{!-- ── STOCK WARNING MODAL ── --}}
+      {{#if this.stockWarnItem}}
+        <div class="stock-warn-overlay" role="dialog" aria-modal="true">
+          <div class="stock-warn-modal">
+            <div class="stock-warn-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div class="stock-warn-title">Low Stock Warning</div>
+            <div class="stock-warn-body">
+              Please confirm quantification for <strong>{{this.stockWarnItem.name}}</strong>. Stock might be low — current level is {{this.stockWarnItem.stock}} unit(s).
+            </div>
+            <label class="stock-warn-dismiss">
+              <input type="checkbox" checked={{this.stockWarnDismissToday}} {{on "change" this.toggleStockWarnDismiss}} />
+              Do not show this warning again today
+            </label>
+            <div class="stock-warn-actions">
+              <button type="button" class="btn btn-ghost" {{on "click" this.cancelStockWarn}}>Cancel</button>
+              <button type="button" class="btn btn-primary" {{on "click" this.confirmStockWarn}}>Add Anyway</button>
+            </div>
+          </div>
+        </div>
+      {{/if}}
+
       <div class="panel-overlay" role="dialog" aria-modal="true" {{on "click" this.handleOverlayClick}}>
         <div class="panel-slideover">
 
@@ -321,153 +410,247 @@ export default class ProjectDetailPanel extends Component {
             {{!-- ── QUOTE BUILDER TAB ── --}}
             {{#if (eq this.activeTab "quote")}}
 
-              {{!-- Project Parameters --}}
-              <div class="quote-section">
-                <div class="quote-section-header">
-                  <div class="quote-section-title">Project Parameters</div>
-                  <div class="quote-section-subtitle">Define the physical areas for automatic cost calculations</div>
-                </div>
-
-                <div class="quote-params-grid">
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="q-floor">Floor Area (m²)</label>
-                    <input id="q-floor" type="number" min="0" step="0.1" class="form-input" value={{this.floorArea}} {{on "input" (fn this.handleAreaInput "floor")}} />
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="q-wall">Wall Area (m²)</label>
-                    <input id="q-wall" type="number" min="0" step="0.1" class="form-input" value={{this.wallArea}} {{on "input" (fn this.handleAreaInput "wall")}} />
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="q-ceiling">Ceiling Area (m²)</label>
-                    <input id="q-ceiling" type="number" min="0" step="0.1" class="form-input" value={{this.ceilingArea}} {{on "input" (fn this.handleAreaInput "ceiling")}} />
-                  </div>
-                </div>
-
-                <div class="quote-params-grid" style="margin-top: var(--space-3);">
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="q-markup">Markup %</label>
-                    <input id="q-markup" type="number" min="0" step="0.5" class="form-input" value={{this.markupPct}} {{on "input" (fn this.handleAreaInput "markup")}} />
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="q-contingency">Contingency %</label>
-                    <input id="q-contingency" type="number" min="0" step="0.5" class="form-input" value={{this.contingencyPct}} {{on "input" (fn this.handleAreaInput "contingency")}} />
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="q-vat">VAT % (IE)</label>
-                    <input id="q-vat" type="number" min="0" step="0.5" class="form-input" value={{this.vatPct}} {{on "input" (fn this.handleAreaInput "vat")}} />
-                  </div>
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; margin-top: var(--space-4);">
-                  <button type="button" class="btn btn-secondary" disabled={{this.isSavingQuote}} {{on "click" this.saveQuoteParams}}>
-                    {{if this.isSavingQuote "Saving..." "Save Parameters"}}
-                  </button>
-                </div>
+              {{!-- Quote mode sub-tabs --}}
+              <div class="quote-mode-bar">
+                <button
+                  type="button"
+                  class={{if (eq this.quoteMode "quick") "quote-mode-btn quote-mode-btn-active" "quote-mode-btn"}}
+                  {{on "click" (fn this.setQuoteMode "quick")}}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                  </svg>
+                  Quick Estimate
+                </button>
+                <button
+                  type="button"
+                  class={{if (eq this.quoteMode "detailed") "quote-mode-btn quote-mode-btn-active" "quote-mode-btn"}}
+                  {{on "click" (fn this.setQuoteMode "detailed")}}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"/>
+                    <line x1="8" y1="12" x2="21" y2="12"/>
+                    <line x1="8" y1="18" x2="21" y2="18"/>
+                    <line x1="3" y1="6" x2="3.01" y2="6"/>
+                    <line x1="3" y1="12" x2="3.01" y2="12"/>
+                    <line x1="3" y1="18" x2="3.01" y2="18"/>
+                  </svg>
+                  Detailed Quote
+                </button>
               </div>
 
-              {{!-- Gross Base Budget --}}
-              <div class="quote-budget-banner">
-                <div>
-                  <div class="quote-budget-label">Gross Base Budget</div>
-                  <div class="quote-budget-sub">
-                    {{this.floorArea}} m² &times; {{if this.baseBuildItem this.baseBuildItem.base_cost "0"}} €/m² (Base Build)
+              {{!-- ── QUICK ESTIMATE ── --}}
+              {{#if (eq this.quoteMode "quick")}}
+                <div class="quote-section">
+                  <div class="quote-section-header">
+                    <div class="quote-section-title">Area Measurements</div>
+                    <div class="quote-section-subtitle">Enter physical dimensions to generate a gross budget estimate</div>
                   </div>
-                </div>
-                <div class="quote-budget-value">{{this.formatEur this.grossBaseBudget}}</div>
-              </div>
 
-              {{!-- Line Items --}}
-              <div class="quote-section">
-                <div class="quote-section-header">
-                  <div class="quote-section-title">Quote Line Items</div>
-                  <div class="quote-section-subtitle">Additional items on top of the base build cost</div>
-                </div>
-
-                {{#if this.lineItems.length}}
-                  <div class="quote-line-table">
-                    <div class="quote-line-thead">
-                      <span>Item</span>
-                      <span>Category</span>
-                      <span style="text-align: right;">Unit Cost</span>
-                      <span style="text-align: right;">Total</span>
-                      <span></span>
+                  <div class="quote-params-grid">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-floor-q">Floor Area (m²)</label>
+                      <input id="q-floor-q" type="number" min="0" step="0.1" class="form-input" value={{this.floorArea}} {{on "input" (fn this.handleAreaInput "floor")}} />
                     </div>
-                    {{#each this.lineItems as |item idx|}}
-                      <div class="quote-line-row">
-                        <span class="quote-line-name">{{item.name}}</span>
-                        <span><span class="catalog-category-tag">{{item.category}}</span></span>
-                        <span style="text-align: right; font-family: var(--font-mono); font-size: var(--text-xs);">
-                          {{this.formatEur item.unit_cost}} / {{unitLabel item.unit_type}}
-                        </span>
-                        <span style="text-align: right; font-weight: 600; font-family: var(--font-mono); font-size: var(--text-sm);">
-                          {{this.formatEur item.line_total}}
-                        </span>
-                        <span style="text-align: right;">
-                          <button type="button" class="btn btn-ghost btn-sm" style="color: var(--color-error-500);" {{on "click" (fn this.removeLineItem idx)}}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                          </button>
-                        </span>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-wall-q">Wall Area (m²)</label>
+                      <input id="q-wall-q" type="number" min="0" step="0.1" class="form-input" value={{this.wallArea}} {{on "input" (fn this.handleAreaInput "wall")}} />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-ceiling-q">Ceiling Area (m²)</label>
+                      <input id="q-ceiling-q" type="number" min="0" step="0.1" class="form-input" value={{this.ceilingArea}} {{on "input" (fn this.handleAreaInput "ceiling")}} />
+                    </div>
+                  </div>
+
+                  <div style="display: flex; justify-content: flex-end; margin-top: var(--space-4);">
+                    <button type="button" class="btn btn-secondary" disabled={{this.isSavingQuote}} {{on "click" this.saveQuoteParams}}>
+                      {{if this.isSavingQuote "Saving..." "Save Parameters"}}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="quote-budget-banner">
+                  <div>
+                    <div class="quote-budget-label">Gross Base Budget</div>
+                    <div class="quote-budget-sub">
+                      {{this.floorArea}} m² &times; {{if this.baseBuildItem this.baseBuildItem.base_cost "0"}} €/m² (Base Build)
+                    </div>
+                  </div>
+                  <div class="quote-budget-value">{{this.formatEur this.grossBaseBudget}}</div>
+                </div>
+
+                <div class="quote-quick-note">
+                  Switch to <strong>Detailed Quote</strong> to add line items, insulation, fittings, and site works.
+                </div>
+              {{/if}}
+
+              {{!-- ── DETAILED QUOTE ── --}}
+              {{#if (eq this.quoteMode "detailed")}}
+
+                {{!-- Project Parameters --}}
+                <div class="quote-section">
+                  <div class="quote-section-header">
+                    <div class="quote-section-title">Project Parameters</div>
+                    <div class="quote-section-subtitle">Define the physical areas for automatic cost calculations</div>
+                  </div>
+
+                  <div class="quote-params-grid">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-floor">Floor Area (m²)</label>
+                      <input id="q-floor" type="number" min="0" step="0.1" class="form-input" value={{this.floorArea}} {{on "input" (fn this.handleAreaInput "floor")}} />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-wall">Wall Area (m²)</label>
+                      <input id="q-wall" type="number" min="0" step="0.1" class="form-input" value={{this.wallArea}} {{on "input" (fn this.handleAreaInput "wall")}} />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-ceiling">Ceiling Area (m²)</label>
+                      <input id="q-ceiling" type="number" min="0" step="0.1" class="form-input" value={{this.ceilingArea}} {{on "input" (fn this.handleAreaInput "ceiling")}} />
+                    </div>
+                  </div>
+
+                  <div class="quote-params-grid" style="margin-top: var(--space-3);">
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-markup">Markup %</label>
+                      <input id="q-markup" type="number" min="0" step="0.5" class="form-input" value={{this.markupPct}} {{on "input" (fn this.handleAreaInput "markup")}} />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-contingency">Contingency %</label>
+                      <input id="q-contingency" type="number" min="0" step="0.5" class="form-input" value={{this.contingencyPct}} {{on "input" (fn this.handleAreaInput "contingency")}} />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="q-vat">VAT % (IE)</label>
+                      <input id="q-vat" type="number" min="0" step="0.5" class="form-input" value={{this.vatPct}} {{on "input" (fn this.handleAreaInput "vat")}} />
+                    </div>
+                  </div>
+
+                  <div style="display: flex; justify-content: flex-end; margin-top: var(--space-4);">
+                    <button type="button" class="btn btn-secondary" disabled={{this.isSavingQuote}} {{on "click" this.saveQuoteParams}}>
+                      {{if this.isSavingQuote "Saving..." "Save Parameters"}}
+                    </button>
+                  </div>
+                </div>
+
+                {{!-- Gross Base Budget --}}
+                <div class="quote-budget-banner">
+                  <div>
+                    <div class="quote-budget-label">Gross Base Budget</div>
+                    <div class="quote-budget-sub">
+                      {{this.floorArea}} m² &times; {{if this.baseBuildItem this.baseBuildItem.base_cost "0"}} €/m² (Base Build)
+                    </div>
+                  </div>
+                  <div class="quote-budget-value">{{this.formatEur this.grossBaseBudget}}</div>
+                </div>
+
+                {{!-- Line Items --}}
+                <div class="quote-section">
+                  <div class="quote-section-header">
+                    <div class="quote-section-title">Quote Line Items</div>
+                    <div class="quote-section-subtitle">Additional items on top of the base build cost</div>
+                  </div>
+
+                  {{#if this.lineItems.length}}
+                    <div class="quote-line-table">
+                      <div class="quote-line-thead">
+                        <span>Item</span>
+                        <span>Category</span>
+                        <span style="text-align: right;">Unit Cost</span>
+                        <span style="text-align: right;">Total</span>
+                        <span></span>
                       </div>
-                    {{/each}}
-                    <div class="quote-line-subtotal">
-                      <span style="grid-column: 1 / 4;">Line Items Subtotal</span>
-                      <span style="text-align: right; font-weight: 700; font-family: var(--font-mono);">{{this.formatEur this.lineItemsSubtotal}}</span>
-                      <span></span>
+                      {{#each this.lineItems as |item idx|}}
+                        <div class="quote-line-row">
+                          <span class="quote-line-name">{{item.name}}</span>
+                          <span><span class="catalog-category-tag">{{item.category}}</span></span>
+                          <span style="text-align: right; font-family: var(--font-mono); font-size: var(--text-xs);">
+                            {{this.formatEur item.unit_cost}} / {{unitLabel item.unit_type}}
+                          </span>
+                          <span style="text-align: right; font-weight: 600; font-family: var(--font-mono); font-size: var(--text-sm);">
+                            {{this.formatEur item.line_total}}
+                          </span>
+                          <span style="text-align: right;">
+                            <button type="button" class="btn btn-ghost btn-sm" style="color: var(--color-error-500);" {{on "click" (fn this.removeLineItem idx)}}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            </button>
+                          </span>
+                        </div>
+                      {{/each}}
+                      <div class="quote-line-subtotal">
+                        <span style="grid-column: 1 / 4;">Line Items Subtotal</span>
+                        <span style="text-align: right; font-weight: 700; font-family: var(--font-mono);">{{this.formatEur this.lineItemsSubtotal}}</span>
+                        <span></span>
+                      </div>
                     </div>
-                  </div>
-                {{else}}
-                  <div style="padding: var(--space-5); text-align: center; color: var(--text-tertiary); font-size: var(--text-sm); background-color: var(--bg-surface-raised); border-radius: var(--radius-md); border: 1px dashed var(--border-strong);">
-                    No line items added yet. Use the dropdown below to add items from the catalog.
-                  </div>
-                {{/if}}
+                  {{else}}
+                    <div style="padding: var(--space-5); text-align: center; color: var(--text-tertiary); font-size: var(--text-sm); background-color: var(--bg-surface-raised); border-radius: var(--radius-md); border: 1px dashed var(--border-strong);">
+                      No line items added yet. Use the search below to find and add items from the catalog.
+                    </div>
+                  {{/if}}
 
-                {{!-- Add from catalog --}}
-                <div class="quote-add-row">
-                  <select class="form-select" style="flex: 1;" {{on "change" this.handleCatalogSelect}}>
-                    <option value="">— Select from catalog —</option>
-                    {{#each this.catalogItems as |item|}}
-                      <CatalogOption
-                        @id={{item.id}}
-                        @name={{item.name}}
-                        @unitLabelStr={{unitLabel item.unit_type}}
-                        @baseCost={{item.base_cost}}
+                  {{!-- Search + add from catalog --}}
+                  <div class="quote-catalog-search-row">
+                    <div class="quote-catalog-search-wrap">
+                      <svg class="quote-catalog-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                      </svg>
+                      <input
+                        type="text"
+                        class="form-input quote-catalog-search-input"
+                        placeholder="Search catalog items..."
+                        value={{this.catalogSearch}}
+                        {{on "input" this.handleCatalogSearch}}
                       />
-                    {{/each}}
-                  </select>
-                  <button
-                    type="button"
-                    class="btn btn-primary"
-                    disabled={{if this.selectedCatalogId false true}}
-                    {{on "click" this.addLineItem}}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    Add Item
-                  </button>
-                </div>
-
-                {{!-- Running total --}}
-                {{#if (or this.grossBaseBudget this.lineItemsSubtotal)}}
-                  <div class="quote-totals-block">
-                    <div class="quote-totals-row">
-                      <span>Gross Base Budget</span>
-                      <span>{{this.formatEur this.grossBaseBudget}}</span>
-                    </div>
-                    <div class="quote-totals-row">
-                      <span>Line Items</span>
-                      <span>{{this.formatEur this.lineItemsSubtotal}}</span>
-                    </div>
-                    <div class="quote-totals-divider"></div>
-                    <div class="quote-totals-row quote-totals-total">
-                      <span>Total (excl. markup &amp; VAT)</span>
-                      <span>{{this.formatEur this.totalBeforeMarkup}}</span>
                     </div>
                   </div>
-                {{/if}}
-              </div>
+
+                  <div class="quote-add-row">
+                    <select class="form-select" style="flex: 1;" {{on "change" this.handleCatalogSelect}}>
+                      <option value="">— Select from catalog —</option>
+                      {{#each this.filteredCatalogItems as |item|}}
+                        <CatalogOption
+                          @id={{item.id}}
+                          @name={{item.name}}
+                          @unitLabelStr={{unitLabel item.unit_type}}
+                          @baseCost={{item.base_cost}}
+                        />
+                      {{/each}}
+                    </select>
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      disabled={{if this.selectedCatalogId false true}}
+                      {{on "click" this.addLineItem}}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                      </svg>
+                      Add Item
+                    </button>
+                  </div>
+
+                  {{!-- Running total --}}
+                  {{#if (or this.grossBaseBudget this.lineItemsSubtotal)}}
+                    <div class="quote-totals-block">
+                      <div class="quote-totals-row">
+                        <span>Gross Base Budget</span>
+                        <span>{{this.formatEur this.grossBaseBudget}}</span>
+                      </div>
+                      <div class="quote-totals-row">
+                        <span>Line Items</span>
+                        <span>{{this.formatEur this.lineItemsSubtotal}}</span>
+                      </div>
+                      <div class="quote-totals-divider"></div>
+                      <div class="quote-totals-row quote-totals-total">
+                        <span>Total (excl. markup &amp; VAT)</span>
+                        <span>{{this.formatEur this.totalBeforeMarkup}}</span>
+                      </div>
+                    </div>
+                  {{/if}}
+                </div>
+              {{/if}}
+
             {{/if}}
 
           </div>

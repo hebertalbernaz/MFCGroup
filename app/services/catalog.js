@@ -13,6 +13,18 @@ export function unitLabel(unitType) {
   return UNIT_TYPES.find((u) => u.value === unitType)?.label ?? unitType;
 }
 
+export const SEED_ITEMS = [
+  { name: 'Base Build (m2)',            category: 'Structure',  unit_type: 'm2',    base_cost: 1450.00, sort_order: 10,  track_stock: false, stock: 0 },
+  { name: 'EPS Insulation (m2)',         category: 'Insulation', unit_type: 'm2',    base_cost:   12.00, sort_order: 20,  track_stock: false, stock: 0 },
+  { name: 'Rockwool Insulation (m2)',    category: 'Insulation', unit_type: 'm2',    base_cost:   18.50, sort_order: 30,  track_stock: false, stock: 0 },
+  { name: 'Standard PVC Window (unit)', category: 'Finishes',   unit_type: 'unit',  base_cost:  850.00, sort_order: 40,  track_stock: true,  stock: 2 },
+  { name: 'Internal Door (unit)',        category: 'Finishes',   unit_type: 'unit',  base_cost:  320.00, sort_order: 50,  track_stock: false, stock: 0 },
+  { name: 'Crane Hire (fixed)',          category: 'Site Works', unit_type: 'fixed', base_cost: 3200.00, sort_order: 60,  track_stock: false, stock: 0 },
+  { name: 'Wide Load Transport (fixed)', category: 'Site Works', unit_type: 'fixed', base_cost: 1800.00, sort_order: 70,  track_stock: false, stock: 0 },
+  { name: 'Electrical Socket (unit)',    category: 'General',    unit_type: 'unit',  base_cost:   45.00, sort_order: 80,  track_stock: true,  stock: 0 },
+  { name: 'Kitchen Appliances Set (fixed)', category: 'Appliances', unit_type: 'fixed', base_cost: 2400.00, sort_order: 90, track_stock: false, stock: 0 },
+];
+
 export default class CatalogService extends Service {
   @service supabase;
 
