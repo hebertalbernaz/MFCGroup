@@ -1,15 +1,9 @@
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
-import { on } from '@ember/modifier';
 import { STATUSES } from 'my-app/services/projects';
 
 class DashboardPage extends Component {
   @service projects;
-  @service appSettings;
-  @service toast;
-
-  @tracked simRunning = false;
 
   get totalProjects() {
     return this.projects.projects.length;
@@ -68,78 +62,12 @@ class DashboardPage extends Component {
     return project.product_type === 'MFC' ? 'badge badge-mfc' : 'badge badge-pod';
   }
 
-  runSimulation = async () => {
-    if (this.simRunning) return;
-    this.simRunning = true;
-
-    const SIM_PD_NUMBER = 1050;
-    const SIM_POD_PROJECT_NUMBER = 42;
-    const SIM_CLIENT = 'Auto Test Client';
-
-    const realPdNumber = this.appSettings.nextPdNumber;
-    const realPodProjectNumber = this.appSettings.nextPodProjectNumber;
-
-    this.appSettings.nextPdNumber = SIM_PD_NUMBER;
-    this.appSettings.nextPodProjectNumber = SIM_POD_PROJECT_NUMBER;
-
-    let simProject = null;
-
-    try {
-      this.toast.info('Simulation started — Step 1: Seeding counters...', { duration: 3000 });
-
-      await new Promise((r) => setTimeout(r, 800));
-
-      simProject = await this.projects.createProject({
-        clientName: SIM_CLIENT,
-        phone: '085-0000000',
-        email: 'sim@test.dev',
-        eircode: 'D01SIM1',
-        productType: 'POD',
-      });
-
-      this.toast.success(
-        `Simulation: Created POD Enquiry with ID ${simProject.project_id}`,
-        { detail: `Client: ${SIM_CLIENT} — status: new_enquiry`, duration: 6000 }
-      );
-
-      this.appSettings.nextPdNumber = realPdNumber;
-
-      await new Promise((r) => setTimeout(r, 1500));
-
-      this.toast.info('Simulation — Step 5: Approving project (triggering lifecycle copy)...', { duration: 3000 });
-
-      await this.projects.updateProjectStatus(simProject.id, 'approved');
-
-    } catch (err) {
-      this.toast.error(`Simulation failed: ${err.message}`, { duration: 8000 });
-    } finally {
-      this.appSettings.nextPodProjectNumber = realPodProjectNumber;
-
-      if (simProject) {
-        await new Promise((r) => setTimeout(r, 3000));
-        await this.projects.deleteProject(simProject.id);
-        this.toast.info('Simulation complete — test record cleaned up.', { duration: 5000 });
-      }
-
-      this.simRunning = false;
-    }
-  }
-
   <template>
     <div class="page-header">
       <div>
         <h1 class="page-title">Dashboard</h1>
         <p class="page-subtitle">Overview of all MFC Group projects and enquiries</p>
       </div>
-      <button
-        type="button"
-        class="btn btn-secondary"
-        style="background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; font-weight: 700; letter-spacing: 0.03em; box-shadow: 0 2px 8px rgba(217,119,6,0.4); opacity: {{if this.simRunning '0.6' '1'}}; cursor: {{if this.simRunning 'not-allowed' 'pointer'}};"
-        disabled={{this.simRunning}}
-        {{on "click" this.runSimulation}}
-      >
-        {{if this.simRunning "Running Simulation..." "Run Logic Simulation"}}
-      </button>
     </div>
 
     {{#if this.projects.isLoading}}

@@ -21,6 +21,8 @@ export default class ProjectsService extends Service {
   @service supabase;
   @service appSettings;
   @service toast;
+  @service auditLog;
+  @service auth;
 
   @tracked projects = [];
   @tracked isLoading = false;
@@ -113,6 +115,7 @@ export default class ProjectsService extends Service {
       }
 
       this.projects = [data, ...this.projects];
+      this.auditLog.logAction(this.auth.currentUser, 'PROJECT_CREATED', `${projectId} — ${formData.clientName} (${formData.productType})`);
       return data;
     } catch (err) {
       this.error = err.message;
@@ -124,6 +127,7 @@ export default class ProjectsService extends Service {
     this.error = null;
     try {
       const project = this.projects.find((p) => p.id === projectId);
+      const prevStatus = project?.status ?? '?';
 
       const { data, error } = await this.supabase.client
         .from('projects')
@@ -135,6 +139,11 @@ export default class ProjectsService extends Service {
       if (error) throw error;
 
       this.projects = this.projects.map((p) => (p.id === projectId ? data : p));
+      this.auditLog.logAction(
+        this.auth.currentUser,
+        'PROJECT_STATUS_CHANGED',
+        `${project?.project_id ?? projectId}: ${prevStatus} → ${newStatus}`
+      );
 
       if (project && project.product_type === 'POD' && POD_LIFECYCLE_STATUSES.has(newStatus)) {
         const podProjectNumber = this.appSettings.nextPodProjectNumber;
@@ -212,11 +221,17 @@ export default class ProjectsService extends Service {
   async deleteProject(projectId) {
     this.error = null;
     try {
+      const project = this.projects.find((p) => p.id === projectId);
       const { error } = await this.supabase.client.from('projects').delete().eq('id', projectId);
 
       if (error) throw error;
 
       this.projects = this.projects.filter((p) => p.id !== projectId);
+      this.auditLog.logAction(
+        this.auth.currentUser,
+        'PROJECT_DELETED',
+        `${project?.project_id ?? projectId} — ${project?.client_name ?? ''}`
+      );
     } catch (err) {
       this.error = err.message;
       throw err;

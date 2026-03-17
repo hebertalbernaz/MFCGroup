@@ -27,6 +27,8 @@ export const SEED_ITEMS = [
 
 export default class CatalogService extends Service {
   @service supabase;
+  @service auditLog;
+  @service auth;
 
   @tracked items = [];
   @tracked isLoading = false;
@@ -62,11 +64,13 @@ export default class CatalogService extends Service {
 
     if (error) { this.error = error.message; throw error; }
     this.items = [...this.items, data];
+    this.auditLog.logAction(this.auth.currentUser, 'CATALOG_ITEM_CREATED', `${data.name} — €${data.base_cost}`);
     return data;
   }
 
   async updateItem(id, fields) {
     this.error = null;
+    const prev = this.items.find((i) => i.id === id);
     const { data, error } = await this.supabase.client
       .from('catalog_items')
       .update(fields)
@@ -76,11 +80,16 @@ export default class CatalogService extends Service {
 
     if (error) { this.error = error.message; throw error; }
     this.items = this.items.map((i) => (i.id === id ? data : i));
+    const costChange = prev && fields.base_cost !== undefined
+      ? ` (cost: €${prev.base_cost} → €${data.base_cost})`
+      : '';
+    this.auditLog.logAction(this.auth.currentUser, 'CATALOG_ITEM_UPDATED', `${data.name}${costChange}`);
     return data;
   }
 
   async deleteItem(id) {
     this.error = null;
+    const item = this.items.find((i) => i.id === id);
     const { error } = await this.supabase.client
       .from('catalog_items')
       .delete()
@@ -88,6 +97,7 @@ export default class CatalogService extends Service {
 
     if (error) { this.error = error.message; throw error; }
     this.items = this.items.filter((i) => i.id !== id);
+    this.auditLog.logAction(this.auth.currentUser, 'CATALOG_ITEM_DELETED', item?.name ?? id);
   }
 
   getItemById(id) {

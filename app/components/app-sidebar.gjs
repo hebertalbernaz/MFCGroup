@@ -46,7 +46,7 @@ export default class AppSidebar extends Component {
       <nav class="sidebar-nav">
 
         {{#if (or this.isAdmin this.isDesigner)}}
-          <div class="sidebar-section-label">Main</div>
+          <div class="sidebar-section-label">Design</div>
 
           <LinkTo @route="app.dashboard" class="sidebar-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
