@@ -64,7 +64,7 @@ export default class NewEnquiryModal extends Component {
       if (this.appSettings.isConfigured) {
         const result = await generateProjectFolders({
           templatePath: this.appSettings.templatePathFor(project.product_type),
-          destinationPath: this.appSettings.destinationDrivePath,
+          destinationPath: this.appSettings.destinationPathFor(project.product_type),
           projectId: project.project_id,
           clientName: project.client_name,
         });
