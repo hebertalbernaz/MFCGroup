@@ -8,6 +8,8 @@ import { unitLabel } from 'my-app/services/catalog';
 
 function eq(a, b) { return a === b; }
 function or(a, b) { return Boolean(a) || Boolean(b); }
+function and(a, b) { return Boolean(a) && Boolean(b); }
+function not(a) { return !a; }
 
 const STOCK_WARN_KEY = 'mfc_stock_warn_dismissed';
 
