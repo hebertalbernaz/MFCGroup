@@ -1,0 +1,59 @@
+{
+  "name": "my-app",
+  "version": "0.4.0",
+  "private": true,
+  "exports": {
+    "./config/environment": "./app/environment.js",
+    "./*": "./app/*"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite serve",
+    "start": "vite serve",
+    "preview": "vite preview",
+    "lint": "concurrently \"npm:lint:*(!fix)\" --names \"lint:\"",
+    "lint:fix": "concurrently \"npm:lint:*:fix\" --names \"fix:\"",
+    "lint:hbs": "ember-template-lint . --no-error-on-unmatched-pattern",
+    "lint:hbs:fix": "ember-template-lint . --fix --no-error-on-unmatched-pattern",
+    "lint:js": "eslint . --cache",
+    "lint:js:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@ember/string": "^4.0.0",
+    "@embroider/router": "^3.0.6",
+    "ember-page-title": "^8.2.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "tracked-built-ins": "^3.3.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.7",
+    "@babel/eslint-parser": "^7.24.7",
+    "@babel/plugin-proposal-decorators": "^7.24.7",
+    "@embroider/compat": "^4.1.15",
+    "@embroider/core": "^4.4.5",
+    "@embroider/vite": "^1.6.1",
+    "@glimmer/component": "^1.1.2",
+    "@glimmer/tracking": "^1.1.2",
+    "babel-plugin-ember-template-compilation": "^2.3.0",
+    "concurrently": "^9.1.2",
+    "ember-cli": "^6.11.0",
+    "ember-cli-babel": "^8.2.0",
+    "ember-cli-htmlbars": "^6.3.0",
+    "ember-load-initializers": "^3.0.1",
+    "ember-modifier": "^4.1.0",
+    "ember-resolver": "^13.2.0",
+    "ember-source": "~6.11.0",
+    "ember-template-lint": "^6.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-ember": "^12.3.3",
+    "eslint-plugin-n": "^17.9.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.3.3",
+    "vite": "^5.3.5",
+    "webpack": "^5.93.0"
+  },
+  "engines": {
+    "node": ">= 18"
+  }
+}
