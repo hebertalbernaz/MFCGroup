@@ -42,12 +42,16 @@ export default class ProjectDetailPanel extends Component {
   @service projects;
   @service catalog;
   @service toast;
+  @service auth;
+  @service auditLog;
 
   @tracked activeTab = 'details';
   @tracked quoteMode = 'quick';
   @tracked notes = '';
   @tracked isSavingNotes = false;
   @tracked lastSyncedProjectId = null;
+  @tracked isArchiving = false;
+  @tracked showArchiveConfirm = false;
 
   @tracked floorArea = '0';
   @tracked wallArea = '0';
@@ -65,6 +69,14 @@ export default class ProjectDetailPanel extends Component {
   get project() { return this.args.project; }
   get isOpen() { return !!this.project; }
   get statuses() { return STATUSES; }
+
+  get canArchive() {
+    return this.auth.isAdmin || this.auth.isEstimator;
+  }
+
+  get isArchived() {
+    return this.project?.status === 'archived';
+  }
 
   get badgeClass() {
     return this.project?.product_type === 'MFC' ? 'badge badge-mfc' : 'badge badge-pod';
@@ -143,6 +155,7 @@ export default class ProjectDetailPanel extends Component {
       this.contingencyPct = String(this.project.contingency_percentage ?? 5);
       this.vatPct = String(this.project.vat_percentage ?? 13.5);
       this.lastSyncedProjectId = this.project.id;
+      this.showArchiveConfirm = false;
       if (!this.catalog.items.length && !this.catalog.isLoading) {
         this.catalog.load();
       }
@@ -167,6 +180,34 @@ export default class ProjectDetailPanel extends Component {
       this.toast.error('Failed to save notes.', { duration: 5000 });
     } finally {
       this.isSavingNotes = false;
+    }
+  };
+
+  requestArchive = () => {
+    this.showArchiveConfirm = true;
+  };
+
+  cancelArchive = () => {
+    this.showArchiveConfirm = false;
+  };
+
+  confirmArchive = async () => {
+    if (this.isArchiving || !this.project) return;
+    this.isArchiving = true;
+    this.showArchiveConfirm = false;
+    try {
+      await this.projects.updateProjectStatus(this.project.id, 'archived');
+      this.auditLog.logAction(
+        this.auth.currentUser,
+        'PROJECT_ARCHIVED',
+        `${this.project.project_id} — ${this.project.client_name}`
+      );
+      this.toast.success(`${this.project.project_id} archived.`, { duration: 3000 });
+      this.args.onClose?.();
+    } catch {
+      this.toast.error('Failed to archive project.', { duration: 5000 });
+    } finally {
+      this.isArchiving = false;
     }
   };
 
@@ -304,6 +345,31 @@ export default class ProjectDetailPanel extends Component {
         </div>
       {{/if}}
 
+      {{!-- ── ARCHIVE CONFIRM MODAL ── --}}
+      {{#if this.showArchiveConfirm}}
+        <div class="stock-warn-overlay" role="dialog" aria-modal="true">
+          <div class="stock-warn-modal">
+            <div class="stock-warn-icon" style="color: var(--color-warning-500);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="21 8 21 21 3 21 3 8"/>
+                <rect x="1" y="3" width="22" height="5"/>
+                <line x1="10" y1="12" x2="14" y2="12"/>
+              </svg>
+            </div>
+            <div class="stock-warn-title">Archive Project?</div>
+            <div class="stock-warn-body">
+              <strong>{{this.project.project_id}} — {{this.project.client_name}}</strong> will be moved to the Archive. It can be un-archived from the Quoting Desk at any time.
+            </div>
+            <div class="stock-warn-actions">
+              <button type="button" class="btn btn-ghost" {{on "click" this.cancelArchive}}>Cancel</button>
+              <button type="button" class="btn btn-danger" disabled={{this.isArchiving}} {{on "click" this.confirmArchive}}>
+                {{if this.isArchiving "Archiving..." "Archive Project"}}
+              </button>
+            </div>
+          </div>
+        </div>
+      {{/if}}
+
       <div class="panel-overlay" role="dialog" aria-modal="true" {{on "click" this.handleOverlayClick}}>
         <div class="panel-slideover">
 
@@ -311,16 +377,37 @@ export default class ProjectDetailPanel extends Component {
             <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
               <span class="panel-project-id">{{this.project.project_id}}</span>
               <span class={{this.badgeClass}}>{{this.project.product_type}}</span>
-              <div class={{this.slaBadgeClass}}>
-                <div class={{this.slaDotClass}}></div>
-                {{this.slaLabel}}
-              </div>
+              {{#if this.isArchived}}
+                <span class="sla-badge" style="background: var(--bg-surface-raised); color: var(--text-secondary); border: 1px solid var(--border-strong);">Archived</span>
+              {{else}}
+                <div class={{this.slaBadgeClass}}>
+                  <div class={{this.slaDotClass}}></div>
+                  {{this.slaLabel}}
+                </div>
+              {{/if}}
             </div>
-            <button type="button" class="btn btn-ghost btn-icon" {{on "click" @onClose}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+            <div style="display: flex; align-items: center; gap: var(--space-2);">
+              {{#if (and this.canArchive (not this.isArchived))}}
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  style="color: var(--text-secondary); font-size: var(--text-xs);"
+                  {{on "click" this.requestArchive}}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="21 8 21 21 3 21 3 8"/>
+                    <rect x="1" y="3" width="22" height="5"/>
+                    <line x1="10" y1="12" x2="14" y2="12"/>
+                  </svg>
+                  Archive
+                </button>
+              {{/if}}
+              <button type="button" class="btn btn-ghost btn-icon" {{on "click" @onClose}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div class="panel-tabs">
@@ -381,14 +468,16 @@ export default class ProjectDetailPanel extends Component {
                 </div>
               </div>
 
-              <div class="panel-section">
-                <label class="panel-section-title" for="panel-status-select">Pipeline Status</label>
-                <select id="panel-status-select" class="form-select" {{on "change" this.handleStatusChange}}>
-                  {{#each this.statuses as |status|}}
-                    <StatusOption @value={{status.key}} @label={{status.label}} @current={{this.project.status}} />
-                  {{/each}}
-                </select>
-              </div>
+              {{#unless this.isArchived}}
+                <div class="panel-section">
+                  <label class="panel-section-title" for="panel-status-select">Pipeline Status</label>
+                  <select id="panel-status-select" class="form-select" {{on "change" this.handleStatusChange}}>
+                    {{#each this.statuses as |status|}}
+                      <StatusOption @value={{status.key}} @label={{status.label}} @current={{this.project.status}} />
+                    {{/each}}
+                  </select>
+                </div>
+              {{/unless}}
 
               <div class="panel-section">
                 <label class="panel-section-title" for="panel-notes">Internal Memos &amp; Engineering Notes</label>

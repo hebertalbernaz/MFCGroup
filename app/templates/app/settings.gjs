@@ -584,7 +584,7 @@ class SettingsPage extends Component {
     const role = this.auth.role;
     const tabs = [{ id: 'profile', label: 'My Profile' }];
     if (role === 'admin') tabs.push({ id: 'users', label: 'User Management' });
-    if (role === 'admin' || role === 'estimator') tabs.push({ id: 'catalog', label: 'Pricing & Catalog' });
+    if (role === 'admin' || role === 'estimator') tabs.push({ id: 'catalog', label: 'Pricing & Catalog Database' });
     if (role === 'admin' || role === 'designer') tabs.push({ id: 'system', label: 'System Paths & Counters' });
     return tabs;
   }
