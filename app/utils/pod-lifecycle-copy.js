@@ -1,7 +1,5 @@
-export function podLifecycleCopy({ projectId, clientName, podEnquiriesPath, podProjectsPath }) {
-  const numericPart = projectId.startsWith('PD') ? projectId.slice(2) : projectId;
-  const newProjectId = `POD-${numericPart}`;
-  const enquiryFolderName = `${projectId} - ${clientName}`;
+export function podLifecycleCopy({ enquiryProjectId, newProjectId, clientName, podEnquiriesPath, podProjectsPath }) {
+  const enquiryFolderName = `${enquiryProjectId} - ${clientName}`;
   const projectFolderName = `${newProjectId} - ${clientName}`;
   const enquiryFolder = `${podEnquiriesPath}/${enquiryFolderName}`;
   const projectFolder = `${podProjectsPath}/${projectFolderName}`;
@@ -9,5 +7,5 @@ export function podLifecycleCopy({ projectId, clientName, podEnquiriesPath, podP
 
   console.info(`[MFC Folder Engine - POD Lifecycle] ${message}`);
 
-  return { newProjectId, enquiryFolder, projectFolder, projectFolderName, message };
+  return { enquiryFolder, projectFolder, projectFolderName, message };
 }

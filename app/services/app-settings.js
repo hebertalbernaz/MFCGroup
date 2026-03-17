@@ -9,6 +9,7 @@ const KEYS = [
   'pod_projects_path',
   'next_mfc_number',
   'next_pod_number',
+  'next_pod_project_number',
 ];
 
 export default class AppSettingsService extends Service {
@@ -20,7 +21,8 @@ export default class AppSettingsService extends Service {
   @tracked podEnquiriesPath = '';
   @tracked podProjectsPath = '';
   @tracked nextMfcNumber = 2000;
-  @tracked nextPodNumber = 1000;
+  @tracked nextPdNumber = 1000;
+  @tracked nextPodProjectNumber = 42;
   @tracked isLoading = false;
   @tracked isSaving = false;
   @tracked error = null;
@@ -61,7 +63,8 @@ export default class AppSettingsService extends Service {
         if (row.key === 'pod_enquiries_path') this.podEnquiriesPath = row.value;
         if (row.key === 'pod_projects_path') this.podProjectsPath = row.value;
         if (row.key === 'next_mfc_number') this.nextMfcNumber = parseInt(row.value, 10) || 2000;
-        if (row.key === 'next_pod_number') this.nextPodNumber = parseInt(row.value, 10) || 1000;
+        if (row.key === 'next_pod_number') this.nextPdNumber = parseInt(row.value, 10) || 1000;
+        if (row.key === 'next_pod_project_number') this.nextPodProjectNumber = parseInt(row.value, 10) || 42;
       }
     } catch (err) {
       this.error = err.message;
@@ -79,16 +82,25 @@ export default class AppSettingsService extends Service {
     if (!error) this.nextMfcNumber = next;
   }
 
-  async incrementPodNumber() {
-    const next = this.nextPodNumber + 1;
+  async incrementPdNumber() {
+    const next = this.nextPdNumber + 1;
     const { error } = await this.supabase.client
       .from('app_settings')
       .update({ value: String(next) })
       .eq('key', 'next_pod_number');
-    if (!error) this.nextPodNumber = next;
+    if (!error) this.nextPdNumber = next;
   }
 
-  async save({ mfcTemplatePath, podTemplatePath, mfcProjectsPath, podEnquiriesPath, podProjectsPath, nextMfcNumber, nextPodNumber }) {
+  async incrementPodProjectNumber() {
+    const next = this.nextPodProjectNumber + 1;
+    const { error } = await this.supabase.client
+      .from('app_settings')
+      .update({ value: String(next) })
+      .eq('key', 'next_pod_project_number');
+    if (!error) this.nextPodProjectNumber = next;
+  }
+
+  async save({ mfcTemplatePath, podTemplatePath, mfcProjectsPath, podEnquiriesPath, podProjectsPath, nextMfcNumber, nextPdNumber, nextPodProjectNumber }) {
     this.isSaving = true;
     this.error = null;
     try {
@@ -99,7 +111,8 @@ export default class AppSettingsService extends Service {
         { key: 'pod_enquiries_path', value: podEnquiriesPath },
         { key: 'pod_projects_path', value: podProjectsPath },
         { key: 'next_mfc_number', value: String(nextMfcNumber) },
-        { key: 'next_pod_number', value: String(nextPodNumber) },
+        { key: 'next_pod_number', value: String(nextPdNumber) },
+        { key: 'next_pod_project_number', value: String(nextPodProjectNumber) },
       ];
 
       for (const row of upserts) {
@@ -116,7 +129,8 @@ export default class AppSettingsService extends Service {
       this.podEnquiriesPath = podEnquiriesPath;
       this.podProjectsPath = podProjectsPath;
       this.nextMfcNumber = parseInt(nextMfcNumber, 10) || 2000;
-      this.nextPodNumber = parseInt(nextPodNumber, 10) || 1000;
+      this.nextPdNumber = parseInt(nextPdNumber, 10) || 1000;
+      this.nextPodProjectNumber = parseInt(nextPodProjectNumber, 10) || 42;
     } catch (err) {
       this.error = err.message;
       throw err;

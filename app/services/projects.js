@@ -82,7 +82,7 @@ export default class ProjectsService extends Service {
     this.error = null;
     try {
       const isMfc = formData.productType === 'MFC';
-      const counter = isMfc ? this.appSettings.nextMfcNumber : this.appSettings.nextPodNumber;
+      const counter = isMfc ? this.appSettings.nextMfcNumber : this.appSettings.nextPdNumber;
       const projectId = isMfc ? `MFC ${counter}` : `PD${counter}`;
 
       const deadline = new Date();
@@ -109,7 +109,7 @@ export default class ProjectsService extends Service {
       if (isMfc) {
         await this.appSettings.incrementMfcNumber();
       } else {
-        await this.appSettings.incrementPodNumber();
+        await this.appSettings.incrementPdNumber();
       }
 
       this.projects = [data, ...this.projects];
@@ -137,8 +137,12 @@ export default class ProjectsService extends Service {
       this.projects = this.projects.map((p) => (p.id === projectId ? data : p));
 
       if (project && project.product_type === 'POD' && POD_LIFECYCLE_STATUSES.has(newStatus)) {
+        const podProjectNumber = this.appSettings.nextPodProjectNumber;
+        const newProjectId = `POD-${podProjectNumber}`;
+
         const result = podLifecycleCopy({
-          projectId: project.project_id,
+          enquiryProjectId: project.project_id,
+          newProjectId,
           clientName: project.client_name,
           podEnquiriesPath: this.appSettings.podEnquiriesPath,
           podProjectsPath: this.appSettings.podProjectsPath,
@@ -146,13 +150,14 @@ export default class ProjectsService extends Service {
 
         const { error: idError } = await this.supabase.client
           .from('projects')
-          .update({ project_id: result.newProjectId })
+          .update({ project_id: newProjectId })
           .eq('id', projectId);
 
         if (!idError) {
           this.projects = this.projects.map((p) =>
-            p.id === projectId ? { ...data, project_id: result.newProjectId } : p
+            p.id === projectId ? { ...data, project_id: newProjectId } : p
           );
+          await this.appSettings.incrementPodProjectNumber();
         }
 
         this.toast.info(result.message, { duration: 8000 });

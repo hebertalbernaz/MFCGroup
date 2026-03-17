@@ -13,7 +13,8 @@ class FolderPathSection extends Component {
   @tracked podEnquiriesPath = '';
   @tracked podProjectsPath = '';
   @tracked nextMfcNumber = 2000;
-  @tracked nextPodNumber = 1000;
+  @tracked nextPdNumber = 1000;
+  @tracked nextPodProjectNumber = 42;
   @tracked isSaved = false;
 
   constructor() {
@@ -24,7 +25,8 @@ class FolderPathSection extends Component {
     this.podEnquiriesPath = this.appSettings.podEnquiriesPath;
     this.podProjectsPath = this.appSettings.podProjectsPath;
     this.nextMfcNumber = this.appSettings.nextMfcNumber;
-    this.nextPodNumber = this.appSettings.nextPodNumber;
+    this.nextPdNumber = this.appSettings.nextPdNumber;
+    this.nextPodProjectNumber = this.appSettings.nextPodProjectNumber;
   }
 
   get configStatusClass() {
@@ -44,7 +46,11 @@ class FolderPathSection extends Component {
   }
 
   get podIdPreview() {
-    return `PD${this.nextPodNumber}`;
+    return `PD${this.nextPdNumber}`;
+  }
+
+  get podProjectIdPreview() {
+    return `POD-${this.nextPodProjectNumber}`;
   }
 
   updateMfcTemplatePath = (e) => { this.mfcTemplatePath = e.target.value; };
@@ -53,7 +59,8 @@ class FolderPathSection extends Component {
   updatePodEnquiriesPath = (e) => { this.podEnquiriesPath = e.target.value; };
   updatePodProjectsPath = (e) => { this.podProjectsPath = e.target.value; };
   updateNextMfcNumber = (e) => { this.nextMfcNumber = parseInt(e.target.value, 10) || 2000; };
-  updateNextPodNumber = (e) => { this.nextPodNumber = parseInt(e.target.value, 10) || 1000; };
+  updateNextPdNumber = (e) => { this.nextPdNumber = parseInt(e.target.value, 10) || 1000; };
+  updateNextPodProjectNumber = (e) => { this.nextPodProjectNumber = parseInt(e.target.value, 10) || 42; };
 
   handleSave = async (e) => {
     e.preventDefault();
@@ -65,7 +72,8 @@ class FolderPathSection extends Component {
         podEnquiriesPath: this.podEnquiriesPath,
         podProjectsPath: this.podProjectsPath,
         nextMfcNumber: this.nextMfcNumber,
-        nextPodNumber: this.nextPodNumber,
+        nextPdNumber: this.nextPdNumber,
+        nextPodProjectNumber: this.nextPodProjectNumber,
       });
       this.isSaved = true;
       this.toast.success('Settings saved', {
@@ -98,7 +106,7 @@ class FolderPathSection extends Component {
 
         <div style="margin-bottom: var(--space-6); padding: var(--space-4); background-color: var(--bg-surface-raised); border: 1px solid var(--border-default); border-radius: var(--radius-lg);">
           <div style="font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-4);">Sequential ID Counters</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4);">
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" for="next-mfc-number">Next MFC Number</label>
               <input
@@ -112,16 +120,28 @@ class FolderPathSection extends Component {
               <span class="form-hint">Next ID: <strong>{{this.mfcIdPreview}}</strong></span>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" for="next-pod-number">Next POD Number</label>
+              <label class="form-label" for="next-pd-number">Next POD Enquiry Number</label>
               <input
-                id="next-pod-number"
+                id="next-pd-number"
                 type="number"
                 class="form-input"
                 min="1"
-                value={{this.nextPodNumber}}
-                {{on "input" this.updateNextPodNumber}}
+                value={{this.nextPdNumber}}
+                {{on "input" this.updateNextPdNumber}}
               />
               <span class="form-hint">Next ID: <strong>{{this.podIdPreview}}</strong></span>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="next-pod-project-number">Next POD Project Number</label>
+              <input
+                id="next-pod-project-number"
+                type="number"
+                class="form-input"
+                min="1"
+                value={{this.nextPodProjectNumber}}
+                {{on "input" this.updateNextPodProjectNumber}}
+              />
+              <span class="form-hint">Next ID: <strong>{{this.podProjectIdPreview}}</strong></span>
             </div>
           </div>
         </div>
