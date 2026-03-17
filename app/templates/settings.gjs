@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
+import CatalogSection from 'my-app/components/catalog-section';
 
 class FolderPathSection extends Component {
   @service appSettings;
@@ -344,6 +345,7 @@ export default <template>
 
   <div style="max-width: 720px;">
     <FolderPathSection />
+    <CatalogSection />
     <AppearanceSection />
     <SlaSection />
     <AboutSection />

@@ -190,6 +190,25 @@ export default class ProjectsService extends Service {
     }
   }
 
+  async updateProjectQuote(projectId, quoteFields) {
+    this.error = null;
+    try {
+      const { data, error } = await this.supabase.client
+        .from('projects')
+        .update(quoteFields)
+        .eq('id', projectId)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      this.projects = this.projects.map((p) => (p.id === projectId ? data : p));
+      return data;
+    } catch (err) {
+      this.error = err.message;
+      throw err;
+    }
+  }
+
   async deleteProject(projectId) {
     this.error = null;
     try {
