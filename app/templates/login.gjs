@@ -24,11 +24,10 @@ class LoginPage extends Component {
 
     const result = this.auth.login(this.username, this.password);
     if (result.success) {
-      const role = this.auth.role;
-      if (role === 'estimator') {
-        this.router.transitionTo('quoting-desk');
+      if (this.auth.role === 'estimator') {
+        this.router.transitionTo('app.quoting-desk');
       } else {
-        this.router.transitionTo('dashboard');
+        this.router.transitionTo('app.dashboard');
       }
     } else {
       this.error = result.error;
@@ -94,22 +93,6 @@ class LoginPage extends Component {
             {{/if}}
           </button>
         </form>
-
-        <div class="login-hint">
-          <div class="login-hint-title">Demo Credentials</div>
-          <div class="login-hint-row">
-            <span class="login-hint-role login-hint-admin">Admin</span>
-            <span class="login-hint-creds">admin / 1234</span>
-          </div>
-          <div class="login-hint-row">
-            <span class="login-hint-role login-hint-designer">Designer</span>
-            <span class="login-hint-creds">designer / designer</span>
-          </div>
-          <div class="login-hint-row">
-            <span class="login-hint-role login-hint-estimator">Estimator</span>
-            <span class="login-hint-creds">estimator / estimator</span>
-          </div>
-        </div>
       </div>
 
       <div class="login-footer">
