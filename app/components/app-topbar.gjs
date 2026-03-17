@@ -1,0 +1,59 @@
+import Component from '@glimmer/component';
+import { service } from '@ember/service';
+import { on } from '@ember/modifier';
+
+export default class AppTopbar extends Component {
+  @service theme;
+  @service router;
+
+  get pageTitle() {
+    const route = this.router.currentRouteName;
+    const titles = {
+      'app.dashboard': 'Dashboard',
+      'app.projects': 'Projects — Kanban Board',
+      'app.calendar': 'Calendar',
+      'app.settings': 'Settings',
+      'app.quoting-desk': 'Quoting Desk',
+      'app.reports': 'Reports & Analytics',
+    };
+    return titles[route] || 'MFC Group';
+  }
+
+  toggleTheme = () => {
+    this.theme.toggle();
+  };
+
+  <template>
+    <header class="app-topbar">
+      <span class="topbar-title">{{this.pageTitle}}</span>
+      <div class="topbar-actions">
+        <button class="theme-toggle" type="button" {{on "click" this.toggleTheme}} title="Toggle dark/light mode">
+          {{#if this.theme.isDark}}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          {{else}}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+            </svg>
+          {{/if}}
+        </button>
+        <button class="btn btn-primary btn-sm" type="button" {{on "click" @onNewEnquiry}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New Enquiry
+        </button>
+      </div>
+    </header>
+  </template>
+}
