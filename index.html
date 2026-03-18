@@ -6,6 +6,20 @@
     <title>MFC Group Design System</title>
     {{content-for "head"}}
     {{content-for "head-footer"}}
+    <script>
+      window.onerror = function(msg, src, line, col, err) {
+        var div = document.createElement('div');
+        div.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:16px;background:#fee2e2;color:#991b1b;font-family:monospace;font-size:13px;z-index:99999;white-space:pre-wrap;word-break:break-all;border-bottom:2px solid #ef4444;';
+        div.textContent = 'JS Error: ' + msg + '\n' + (src ? src + ':' + line + ':' + col : '') + (err && err.stack ? '\n\n' + err.stack : '');
+        document.body ? document.body.prepend(div) : document.addEventListener('DOMContentLoaded', function(){ document.body.prepend(div); });
+      };
+      window.onunhandledrejection = function(e) {
+        var div = document.createElement('div');
+        div.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:16px;background:#fef3c7;color:#92400e;font-family:monospace;font-size:13px;z-index:99999;white-space:pre-wrap;word-break:break-all;border-bottom:2px solid #f59e0b;';
+        div.textContent = 'Unhandled Promise Rejection: ' + (e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
+        document.body ? document.body.prepend(div) : document.addEventListener('DOMContentLoaded', function(){ document.body.prepend(div); });
+      };
+    </script>
   </head>
   <body>
     {{content-for "body"}}
