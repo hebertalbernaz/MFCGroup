@@ -1,14 +1,24 @@
 const prefix = 'my-app';
+const defaultConfig = {
+  modulePrefix: 'my-app',
+  podModulePrefix: 'my-app/pods',
+  environment: 'development',
+  rootURL: '/',
+  locationType: 'history',
+  EmberENV: { EXTEND_PROTOTYPES: false, FEATURES: {} },
+  APP: {},
+};
+
 let config;
 try {
   const metaName = prefix + '/config/environment';
-  const rawConfig = document
-    .querySelector('meta[name="' + metaName + '"]')
-    .getAttribute('content');
-  config = JSON.parse(decodeURIComponent(rawConfig));
+  const metaEl = document.querySelector('meta[name="' + metaName + '"]');
+  if (metaEl) {
+    config = JSON.parse(decodeURIComponent(metaEl.getAttribute('content')));
+  } else {
+    config = defaultConfig;
+  }
 } catch (err) {
-  throw new Error(
-    'Could not read config from meta tag with name "' + prefix + '/config/environment".'
-  );
+  config = defaultConfig;
 }
 export default config;
