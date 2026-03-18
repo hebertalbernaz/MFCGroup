@@ -59,6 +59,12 @@ function ensureEmbroiderCache() {
 }
 
 export default defineConfig({
+  server: {
+    port: 4201,
+    hmr: {
+      clientPort: 4201,
+    },
+  },
   resolve: {
     alias: {
       'my-app/config/environment': resolve(__dirname, 'app/environment.js'),
