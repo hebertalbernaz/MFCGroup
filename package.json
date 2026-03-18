@@ -7,6 +7,9 @@
     "./*": "./app/*"
   },
   "scripts": {
+    "predev": "node scripts/ensure-embroider-cache.cjs",
+    "prestart": "node scripts/ensure-embroider-cache.cjs",
+    "prebuild": "node scripts/ensure-embroider-cache.cjs",
     "build": "vite build",
     "dev": "vite serve",
     "start": "vite serve",
