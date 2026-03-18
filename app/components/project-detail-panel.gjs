@@ -3,8 +3,8 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
-import { STATUSES } from 'my-app/services/projects';
-import { unitLabel } from 'my-app/services/catalog';
+import { STATUSES } from '../services/projects';
+import { unitLabel } from '../services/catalog';
 
 function eq(a, b) { return a === b; }
 function or(a, b) { return Boolean(a) || Boolean(b); }

@@ -11,7 +11,9 @@ module.exports = function (environment) {
       FEATURES: {},
     },
 
-    APP: {},
+    APP: {
+      rootElement: '#app',
+    },
   };
 
   if (environment === 'development') {

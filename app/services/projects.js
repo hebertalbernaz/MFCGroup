@@ -1,6 +1,6 @@
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { podLifecycleCopy } from 'my-app/utils/pod-lifecycle-copy';
+import { podLifecycleCopy } from '../utils/pod-lifecycle-copy';
 
 export const STATUSES = [
   { key: 'new_enquiry', label: 'New Enquiries' },

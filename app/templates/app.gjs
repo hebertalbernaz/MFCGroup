@@ -1,4 +1,4 @@
-import AppLayout from 'my-app/components/app-layout';
+import AppLayout from '../components/app-layout';
 
 <template>
   <AppLayout>

@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
-import { generateProjectFolders } from 'my-app/utils/generate-project-folders';
+import { generateProjectFolders } from '../utils/generate-project-folders';
 
 export default class NewEnquiryModal extends Component {
   @service projects;

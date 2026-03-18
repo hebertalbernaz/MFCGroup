@@ -2,9 +2,9 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
-import { STATUSES } from 'my-app/services/projects';
-import KanbanCard from 'my-app/components/kanban-card';
-import ProjectDetailPanel from 'my-app/components/project-detail-panel';
+import { STATUSES } from '../../services/projects';
+import KanbanCard from '../../components/kanban-card';
+import ProjectDetailPanel from '../../components/project-detail-panel';
 
 class KanbanColumn extends Component {
   get cards() {

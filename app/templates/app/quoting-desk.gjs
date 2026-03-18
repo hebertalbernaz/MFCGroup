@@ -3,7 +3,7 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
-import ProjectDetailPanel from 'my-app/components/project-detail-panel';
+import ProjectDetailPanel from '../../components/project-detail-panel';
 
 function eq(a, b) { return a === b; }
 

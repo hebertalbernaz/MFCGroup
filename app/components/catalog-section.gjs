@@ -3,7 +3,7 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
 import { fn } from '@ember/helper';
-import { CATEGORIES, UNIT_TYPES, unitLabel } from 'my-app/services/catalog';
+import { CATEGORIES, UNIT_TYPES, unitLabel } from '../services/catalog';
 
 function eq(a, b) { return a === b; }
 

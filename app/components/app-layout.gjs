@@ -1,9 +1,9 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import AppSidebar from 'my-app/components/app-sidebar';
-import AppTopbar from 'my-app/components/app-topbar';
-import NewEnquiryModal from 'my-app/components/new-enquiry-modal';
-import ToastContainer from 'my-app/components/toast-container';
+import AppSidebar from './app-sidebar';
+import AppTopbar from './app-topbar';
+import NewEnquiryModal from './new-enquiry-modal';
+import ToastContainer from './toast-container';
 import { tracked } from '@glimmer/tracking';
 
 export default class AppLayout extends Component {

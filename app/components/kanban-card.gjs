@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { on } from '@ember/modifier';
-import { STATUSES } from 'my-app/services/projects';
+import { STATUSES } from '../services/projects';
 
 class StatusOption extends Component {
   get isSelected() {

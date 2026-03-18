@@ -2,7 +2,7 @@ import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { on } from '@ember/modifier';
-import { STATUSES } from 'my-app/services/projects';
+import { STATUSES } from '../services/projects';
 
 class DashboardPage extends Component {
   @service projects;
