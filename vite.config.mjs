@@ -60,9 +60,10 @@ function ensureEmbroiderCache() {
 
 export default defineConfig({
   server: {
-    port: 4201,
+    port: 5173,
+    strictPort: true,
     hmr: {
-      clientPort: 4201,
+      clientPort: 5173,
     },
   },
   resolve: {
