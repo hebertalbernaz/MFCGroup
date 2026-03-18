@@ -7,7 +7,7 @@ export default class LoginRoute extends Route {
 
   beforeModel() {
     if (this.auth.isAuthenticated) {
-      this.router.replaceWith('dashboard');
+      this.router.replaceWith('app.dashboard');
     }
   }
 }

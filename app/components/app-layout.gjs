@@ -33,7 +33,7 @@ export default class AppLayout extends Component {
       <div class="app-main">
         <AppTopbar @onNewEnquiry={{this.openNewEnquiry}} />
         <div class="app-content">
-          {{outlet}}
+          {{yield}}
         </div>
       </div>
     </div>

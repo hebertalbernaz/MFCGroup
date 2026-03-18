@@ -1,5 +1,7 @@
 import AppLayout from 'my-app/components/app-layout';
 
 <template>
-  <AppLayout />
+  <AppLayout>
+    {{outlet}}
+  </AppLayout>
 </template>
