@@ -66,6 +66,12 @@ export default class ProjectsService extends Service {
     this.isLoading = true;
     this.error = null;
     try {
+      if (!this.supabase.client) {
+        console.warn('Supabase client not available, using mock data');
+        this.projects = this.getMockProjects();
+        return;
+      }
+
       const { data, error } = await this.supabase.client
         .from('projects')
         .select('*')
@@ -74,10 +80,66 @@ export default class ProjectsService extends Service {
       if (error) throw error;
       this.projects = data || [];
     } catch (err) {
+      console.error('Error loading projects:', err);
       this.error = err.message;
+      this.projects = this.getMockProjects();
     } finally {
       this.isLoading = false;
     }
+  }
+
+  async fetchProjects() {
+    return this.loadProjects();
+  }
+
+  getMockProjects() {
+    return [
+      {
+        id: 'mock-1',
+        tpf_id: 'POD-1000',
+        client_name: 'Sample Client A',
+        email: 'client-a@example.ie',
+        phone: '01 234 5678',
+        address: '123 Main Street',
+        eircode: 'D01 ABC1',
+        pod_model: 'POD-17',
+        status: 'New Enquiry',
+        status_updated_at: new Date().toISOString(),
+        internal_notes: 'Sample project for demonstration',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'mock-2',
+        tpf_id: 'POD-1001',
+        client_name: 'Sample Client B',
+        email: 'client-b@example.ie',
+        phone: '01 345 6789',
+        address: '456 Oak Avenue',
+        eircode: 'D02 XYZ2',
+        pod_model: 'Custom',
+        status: 'In Design',
+        status_updated_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        internal_notes: 'Custom design requirements',
+        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'mock-3',
+        tpf_id: 'POD-1002',
+        client_name: 'Sample Client C',
+        email: 'client-c@example.ie',
+        phone: '01 456 7890',
+        address: '789 Park Lane',
+        eircode: 'D03 DEF3',
+        pod_model: 'POD-17',
+        status: 'Awaiting Quote',
+        status_updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        internal_notes: '',
+        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
   }
 
   async createProject(formData) {

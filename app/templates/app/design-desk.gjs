@@ -41,6 +41,17 @@ class DesignDeskPage extends Component {
 
   async loadSlaTargets() {
     try {
+      if (!this.supabase.client) {
+        console.warn('Supabase not available, using default SLA targets');
+        this.slaTargets = {
+          sla_new_enquiry: 2,
+          sla_in_design: 7,
+          sla_awaiting_quote: 3,
+          sla_revisions: 5,
+        };
+        return;
+      }
+
       const { data, error } = await this.supabase.client
         .from('app_settings')
         .select('key, value')
@@ -54,6 +65,12 @@ class DesignDeskPage extends Component {
       });
     } catch (error) {
       console.error('Error loading SLA targets:', error);
+      this.slaTargets = {
+        sla_new_enquiry: 2,
+        sla_in_design: 7,
+        sla_awaiting_quote: 3,
+        sla_revisions: 5,
+      };
     }
   }
 
