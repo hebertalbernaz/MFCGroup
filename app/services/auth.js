@@ -28,6 +28,12 @@ export default class AuthService extends Service {
 
   async initAuth() {
     try {
+      if (!this.supabase.auth) {
+        console.error('Supabase auth not available');
+        this.isLoading = false;
+        return;
+      }
+
       const { data: { session } } = await this.supabase.auth.getSession();
       if (session?.user) {
         await this.loadProfile(session.user.id);
@@ -38,14 +44,16 @@ export default class AuthService extends Service {
       this.isLoading = false;
     }
 
-    this.supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        await this.loadProfile(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        this.currentUser = null;
-        this.profile = null;
-      }
-    });
+    if (this.supabase.auth) {
+      this.supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          await this.loadProfile(session.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          this.currentUser = null;
+          this.profile = null;
+        }
+      });
+    }
   }
 
   async loadProfile(userId) {
@@ -108,6 +116,10 @@ export default class AuthService extends Service {
 
   async login(email, password) {
     try {
+      if (!this.supabase.auth) {
+        return { success: false, error: 'Database connection not available' };
+      }
+
       const { data, error } = await this.supabase.auth.signInWithPassword({
         email,
         password,
