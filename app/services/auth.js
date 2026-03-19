@@ -1,153 +1,172 @@
-import Service from '@ember/service';
+import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 export const ROLES = {
-  ADMIN: 'admin',
-  DESIGNER: 'designer',
-  ESTIMATOR: 'estimator',
+  ADMIN: 'Admin',
+  DESIGNER: 'Designer',
+  ESTIMATOR: 'Estimator',
+  PURCHASING: 'Purchasing',
 };
 
 export const ROLE_OPTIONS = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'designer', label: 'Designer' },
-  { value: 'estimator', label: 'Estimator' },
+  { value: 'Admin', label: 'Admin' },
+  { value: 'Designer', label: 'Designer' },
+  { value: 'Estimator', label: 'Estimator' },
+  { value: 'Purchasing', label: 'Purchasing' },
 ];
-
-const SESSION_KEY = 'mfc_session_user';
-const USERS_KEY = 'mfc_users_store';
-
-const DEFAULT_USERS = [
-  { id: 1, username: 'admin', password: '123', role: 'admin', displayName: 'Admin User', initials: 'AU' },
-  { id: 2, username: 'jane_des', password: '123', role: 'designer', displayName: 'Jane Designer', initials: 'JD' },
-  { id: 3, username: 'john_est', password: '123', role: 'estimator', displayName: 'John Estimator', initials: 'JE' },
-];
-
-function loadUsers() {
-  try {
-    const stored = localStorage.getItem(USERS_KEY);
-    if (stored) return JSON.parse(stored);
-  } catch { /* */ }
-  return DEFAULT_USERS.map((u) => ({ ...u }));
-}
-
-function saveUsers(users) {
-  try {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  } catch { /* */ }
-}
-
-function nextId(users) {
-  return users.reduce((max, u) => Math.max(max, u.id), 0) + 1;
-}
-
-function buildInitials(username) {
-  const parts = username.split(/[_\s]/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return username.slice(0, 2).toUpperCase();
-}
-
-function buildDisplayName(username) {
-  return username.split(/[_\s]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}
 
 export default class AuthService extends Service {
+  @service supabase;
   @tracked currentUser = null;
-  @tracked users = [];
+  @tracked profile = null;
+  @tracked isLoading = true;
 
   constructor() {
     super(...arguments);
-    this.users = loadUsers();
-    const stored = sessionStorage.getItem(SESSION_KEY);
-    if (stored) {
-      try {
-        this.currentUser = JSON.parse(stored);
-      } catch {
-        sessionStorage.removeItem(SESSION_KEY);
+    this.initAuth();
+  }
+
+  async initAuth() {
+    try {
+      const { data: { session } } = await this.supabase.auth.getSession();
+      if (session?.user) {
+        await this.loadProfile(session.user.id);
       }
+    } catch (error) {
+      console.error('Auth initialization error:', error);
+    } finally {
+      this.isLoading = false;
+    }
+
+    this.supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await this.loadProfile(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        this.currentUser = null;
+        this.profile = null;
+      }
+    });
+  }
+
+  async loadProfile(userId) {
+    try {
+      const { data, error } = await this.supabase.client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        this.profile = data;
+        this.currentUser = {
+          id: data.id,
+          email: data.email,
+          fullName: data.full_name,
+          role: data.role,
+          initials: this.buildInitials(data.full_name || data.email),
+        };
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
     }
   }
 
-  get isAuthenticated() { return !!this.currentUser; }
-  get role() { return this.currentUser?.role ?? null; }
-  get isAdmin() { return this.role === ROLES.ADMIN; }
-  get isDesigner() { return this.role === ROLES.DESIGNER; }
-  get isEstimator() { return this.role === ROLES.ESTIMATOR; }
-
-  login(username, password) {
-    const user = this.users.find(
-      (u) => u.username.toLowerCase() === username?.toLowerCase() && u.password === password
-    );
-    if (!user) {
-      return { success: false, error: 'Invalid username or password.' };
+  buildInitials(name) {
+    if (!name) return 'U';
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
-    const sessionUser = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      displayName: user.displayName,
-      initials: user.initials,
-    };
-    this.currentUser = sessionUser;
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
-    return { success: true };
+    return name.slice(0, 2).toUpperCase();
   }
 
-  logout() {
-    this.currentUser = null;
-    sessionStorage.removeItem(SESSION_KEY);
+  get isAuthenticated() {
+    return !!this.currentUser;
   }
 
-  changeOwnPassword(newPassword) {
-    if (!newPassword?.trim() || !this.currentUser) {
-      return { success: false, error: 'Password cannot be empty.' };
+  get role() {
+    return this.currentUser?.role ?? null;
+  }
+
+  get isAdmin() {
+    return this.role === ROLES.ADMIN;
+  }
+
+  get isDesigner() {
+    return this.role === ROLES.DESIGNER;
+  }
+
+  get isEstimator() {
+    return this.role === ROLES.ESTIMATOR;
+  }
+
+  get isPurchasing() {
+    return this.role === ROLES.PURCHASING;
+  }
+
+  async login(email, password) {
+    try {
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        await this.loadProfile(data.user.id);
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
-    const updated = this.users.map((u) =>
-      u.id === this.currentUser.id ? { ...u, password: newPassword } : u
-    );
-    this.users = updated;
-    saveUsers(updated);
-    return { success: true };
   }
 
-  adminResetUserPassword(userId, newPassword) {
-    if (!this.isAdmin) return { success: false, error: 'Unauthorized.' };
-    if (!newPassword?.trim()) return { success: false, error: 'Password cannot be empty.' };
-    const updated = this.users.map((u) =>
-      u.id === userId ? { ...u, password: newPassword } : u
-    );
-    this.users = updated;
-    saveUsers(updated);
-    return { success: true };
-  }
-
-  adminAddUser(username, password, role) {
-    if (!this.isAdmin) return { success: false, error: 'Unauthorized.' };
-    if (!username?.trim()) return { success: false, error: 'Username is required.' };
-    if (!password?.trim()) return { success: false, error: 'Password is required.' };
-    const exists = this.users.find(
-      (u) => u.username.toLowerCase() === username.trim().toLowerCase()
-    );
-    if (exists) return { success: false, error: 'Username already exists.' };
-    const newUser = {
-      id: nextId(this.users),
-      username: username.trim(),
-      password: password.trim(),
-      role: role || 'designer',
-      displayName: buildDisplayName(username.trim()),
-      initials: buildInitials(username.trim()),
-    };
-    this.users = [...this.users, newUser];
-    saveUsers(this.users);
-    return { success: true };
-  }
-
-  adminDeleteUser(userId) {
-    if (!this.isAdmin) return { success: false, error: 'Unauthorized.' };
-    if (userId === this.currentUser?.id) {
-      return { success: false, error: 'You cannot delete your own account.' };
+  async logout() {
+    try {
+      await this.supabase.auth.signOut();
+      this.currentUser = null;
+      this.profile = null;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
-    this.users = this.users.filter((u) => u.id !== userId);
-    saveUsers(this.users);
-    return { success: true };
+  }
+
+  async signUp(email, password, fullName, role = 'Designer') {
+    try {
+      const { data, error } = await this.supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        const { error: profileError } = await this.supabase.client
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email,
+            full_name: fullName,
+            role,
+          });
+
+        if (profileError) {
+          return { success: false, error: profileError.message };
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 }

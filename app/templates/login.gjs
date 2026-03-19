@@ -7,12 +7,12 @@ class LoginPage extends Component {
   @service auth;
   @service router;
 
-  @tracked username = '';
+  @tracked email = '';
   @tracked password = '';
   @tracked error = '';
   @tracked isLoading = false;
 
-  updateUsername = (e) => { this.username = e.target.value; };
+  updateEmail = (e) => { this.email = e.target.value; };
   updatePassword = (e) => { this.password = e.target.value; };
 
   handleSubmit = async (e) => {
@@ -20,17 +20,18 @@ class LoginPage extends Component {
     this.error = '';
     this.isLoading = true;
 
-    await new Promise((r) => setTimeout(r, 300));
-
-    const result = this.auth.login(this.username, this.password);
+    const result = await this.auth.login(this.email, this.password);
     if (result.success) {
-      if (this.auth.role === 'estimator') {
+      const role = this.auth.role;
+      if (role === 'Estimator') {
         this.router.transitionTo('app.quoting-desk');
+      } else if (role === 'Designer') {
+        this.router.transitionTo('app.projects');
       } else {
         this.router.transitionTo('app.dashboard');
       }
     } else {
-      this.error = result.error;
+      this.error = result.error || 'Invalid email or password';
     }
     this.isLoading = false;
   };
@@ -39,11 +40,11 @@ class LoginPage extends Component {
     <div class="login-shell">
       <div class="login-card">
         <div class="login-logo">
-          <div class="login-logo-mark">MFC</div>
+          <div class="login-logo-mark">TPF</div>
         </div>
         <div class="login-header">
-          <h1 class="login-title">MFC Group</h1>
-          <p class="login-subtitle">Design Management System</p>
+          <h1 class="login-title">The Pod Factory</h1>
+          <p class="login-subtitle">Enterprise Resource Planning System</p>
         </div>
 
         <form class="login-form" {{on "submit" this.handleSubmit}}>
@@ -59,15 +60,16 @@ class LoginPage extends Component {
           {{/if}}
 
           <div class="form-group">
-            <label class="form-label" for="login-username">Username</label>
+            <label class="form-label" for="login-email">Email Address</label>
             <input
-              id="login-username"
-              type="text"
+              id="login-email"
+              type="email"
               class="form-input"
-              placeholder="Enter your username"
-              autocomplete="username"
-              value={{this.username}}
-              {{on "input" this.updateUsername}}
+              placeholder="Enter your email"
+              autocomplete="email"
+              value={{this.email}}
+              {{on "input" this.updateEmail}}
+              required
             />
           </div>
 
@@ -81,6 +83,7 @@ class LoginPage extends Component {
               autocomplete="current-password"
               value={{this.password}}
               {{on "input" this.updatePassword}}
+              required
             />
           </div>
 
@@ -96,7 +99,7 @@ class LoginPage extends Component {
       </div>
 
       <div class="login-footer">
-        MFC Group Design System &mdash; Ireland
+        The Pod Factory System &mdash; Ireland
       </div>
     </div>
   </template>

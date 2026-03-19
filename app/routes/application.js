@@ -5,9 +5,13 @@ export default class ApplicationRoute extends Route {
   @service auth;
   @service router;
 
-  beforeModel(transition) {
+  async beforeModel(transition) {
     const publicRoutes = new Set(['login']);
     const targetRoute = transition.to?.name;
+
+    while (this.auth.isLoading) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
 
     if (!this.auth.isAuthenticated && !publicRoutes.has(targetRoute)) {
       this.router.replaceWith('login');

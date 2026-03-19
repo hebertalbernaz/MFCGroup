@@ -25,7 +25,13 @@
     "@ember/string": "^4.0.0",
     "@embroider/router": "^3.0.6",
     "@supabase/supabase-js": "^2.45.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "ember-page-title": "^8.2.2",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
     "tracked-built-ins": "^3.3.0"
   },
   "devDependencies": {

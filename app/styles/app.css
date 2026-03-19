@@ -1997,6 +1997,11 @@ body {
   color: var(--color-accent-700);
 }
 
+.sidebar-role-purchasing {
+  background-color: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+}
+
 .sidebar-logout-btn {
   display: flex;
   align-items: center;

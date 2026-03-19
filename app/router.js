@@ -13,6 +13,7 @@ Router.map(function () {
     this.route('projects');
     this.route('calendar');
     this.route('settings');
+    this.route('tpf-settings');
     this.route('quoting-desk');
     this.route('reports');
   });
