@@ -11,6 +11,7 @@ Router.map(function () {
   this.route('app', { path: '/' }, function () {
     this.route('dashboard', { path: '/' });
     this.route('projects');
+    this.route('design-desk');
     this.route('calendar');
     this.route('settings');
     this.route('tpf-settings');

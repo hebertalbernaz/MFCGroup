@@ -9,6 +9,10 @@ class TpfSettingsPage extends Component {
   @service auth;
 
   @tracked nextPodNumber = 1000;
+  @tracked slaNewEnquiry = 2;
+  @tracked slaInDesign = 7;
+  @tracked slaAwaitingQuote = 3;
+  @tracked slaRevisions = 5;
   @tracked isLoading = true;
   @tracked isSaving = false;
 
@@ -21,13 +25,24 @@ class TpfSettingsPage extends Component {
     try {
       const { data, error } = await this.supabase.client
         .from('app_settings')
-        .select('value')
-        .eq('key', 'next_pod_number')
-        .maybeSingle();
+        .select('key, value')
+        .in('key', ['next_pod_number', 'sla_new_enquiry', 'sla_in_design', 'sla_awaiting_quote', 'sla_revisions']);
 
       if (error) throw error;
 
-      this.nextPodNumber = parseInt(data?.value || '1000', 10);
+      data.forEach(item => {
+        if (item.key === 'next_pod_number') {
+          this.nextPodNumber = parseInt(item.value || '1000', 10);
+        } else if (item.key === 'sla_new_enquiry') {
+          this.slaNewEnquiry = parseInt(item.value || '2', 10);
+        } else if (item.key === 'sla_in_design') {
+          this.slaInDesign = parseInt(item.value || '7', 10);
+        } else if (item.key === 'sla_awaiting_quote') {
+          this.slaAwaitingQuote = parseInt(item.value || '3', 10);
+        } else if (item.key === 'sla_revisions') {
+          this.slaRevisions = parseInt(item.value || '5', 10);
+        }
+      });
     } catch (error) {
       console.error('Error loading settings:', error);
       this.toast.error('Failed to load settings');
@@ -43,6 +58,34 @@ class TpfSettingsPage extends Component {
     }
   };
 
+  updateSlaNewEnquiry = (e) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value > 0) {
+      this.slaNewEnquiry = value;
+    }
+  };
+
+  updateSlaInDesign = (e) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value > 0) {
+      this.slaInDesign = value;
+    }
+  };
+
+  updateSlaAwaitingQuote = (e) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value > 0) {
+      this.slaAwaitingQuote = value;
+    }
+  };
+
+  updateSlaRevisions = (e) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value > 0) {
+      this.slaRevisions = value;
+    }
+  };
+
   handleSave = async (e) => {
     e.preventDefault();
     if (this.isSaving) return;
@@ -50,12 +93,22 @@ class TpfSettingsPage extends Component {
     this.isSaving = true;
 
     try {
-      const { error } = await this.supabase.client
-        .from('app_settings')
-        .update({ value: String(this.nextPodNumber) })
-        .eq('key', 'next_pod_number');
+      const updates = [
+        { key: 'next_pod_number', value: String(this.nextPodNumber) },
+        { key: 'sla_new_enquiry', value: String(this.slaNewEnquiry) },
+        { key: 'sla_in_design', value: String(this.slaInDesign) },
+        { key: 'sla_awaiting_quote', value: String(this.slaAwaitingQuote) },
+        { key: 'sla_revisions', value: String(this.slaRevisions) }
+      ];
 
-      if (error) throw error;
+      for (const update of updates) {
+        const { error } = await this.supabase.client
+          .from('app_settings')
+          .update({ value: update.value })
+          .eq('key', update.key);
+
+        if (error) throw error;
+      }
 
       this.toast.success('Settings saved successfully');
     } catch (error) {
@@ -123,6 +176,100 @@ class TpfSettingsPage extends Component {
                 Save Settings
               {{/if}}
             </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card" style="max-width: 600px; margin-top: var(--space-4);">
+        <div class="card-header">
+          <span class="card-title">SLA Targets (Days)</span>
+        </div>
+        <div class="card-body">
+          <p style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-6); line-height: 1.6;">
+            Configure the maximum number of days allowed for each project status. Projects exceeding these targets will be flagged with a red SLA badge on the Design Desk.
+          </p>
+
+          <form {{on "submit" this.handleSave}}>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);">
+              <div class="form-group">
+                <label class="form-label form-label-required" for="sla-new-enquiry">
+                  New Enquiry
+                </label>
+                <input
+                  id="sla-new-enquiry"
+                  type="number"
+                  class="form-input"
+                  min="1"
+                  value={{this.slaNewEnquiry}}
+                  {{on "input" this.updateSlaNewEnquiry}}
+                  required
+                />
+                <span class="form-hint">Days allowed</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label-required" for="sla-in-design">
+                  In Design
+                </label>
+                <input
+                  id="sla-in-design"
+                  type="number"
+                  class="form-input"
+                  min="1"
+                  value={{this.slaInDesign}}
+                  {{on "input" this.updateSlaInDesign}}
+                  required
+                />
+                <span class="form-hint">Days allowed</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label-required" for="sla-awaiting-quote">
+                  Awaiting Quote
+                </label>
+                <input
+                  id="sla-awaiting-quote"
+                  type="number"
+                  class="form-input"
+                  min="1"
+                  value={{this.slaAwaitingQuote}}
+                  {{on "input" this.updateSlaAwaitingQuote}}
+                  required
+                />
+                <span class="form-hint">Days allowed</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label form-label-required" for="sla-revisions">
+                  Revisions
+                </label>
+                <input
+                  id="sla-revisions"
+                  type="number"
+                  class="form-input"
+                  min="1"
+                  value={{this.slaRevisions}}
+                  {{on "input" this.updateSlaRevisions}}
+                  required
+                />
+                <span class="form-hint">Days allowed</span>
+              </div>
+            </div>
+
+            <div style="margin-top: var(--space-4);">
+              <button
+                type="submit"
+                class="btn btn-primary"
+                disabled={{this.isSaving}}
+              >
+                {{#if this.isSaving}}
+                  <div class="loading-spinner" style="width:14px;height:14px;border-width:2px;"></div>
+                  Saving...
+                {{else}}
+                  Save All Settings
+                {{/if}}
+              </button>
+            </div>
           </form>
         </div>
       </div>
